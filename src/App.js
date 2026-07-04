@@ -116,8 +116,10 @@ function BarcodeScanner({ onDetected, onClose }) {
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const rafRef    = useRef(null);
-  const [status, setStatus]   = useState("Starting camera…");
-  const [jsQRLib, setJsQRLib] = useState(null);
+  const [status, setStatus]     = useState("Tap the button below to start your camera");
+  const [jsQRLib, setJsQRLib]   = useState(null);
+  const [started, setStarted]   = useState(false);
+  const [error, setError]       = useState(false);
 
   useEffect(() => {
     if (window.jsQR) { setJsQRLib(() => window.jsQR); return; }
@@ -128,57 +130,93 @@ function BarcodeScanner({ onDetected, onClose }) {
     return () => { try { document.head.removeChild(s); } catch {} };
   }, []);
 
-  useEffect(() => {
-    if (!jsQRLib) return;
+  const startCamera = async () => {
+    if (!jsQRLib) { setStatus("Still loading scanner, please wait a moment…"); return; }
+    setStarted(true);
+    setStatus("Starting camera…");
+    setError(false);
     let active = true;
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-      .then((stream) => {
-        if (!active) { stream.getTracks().forEach(t => t.stop()); return; }
-        streamRef.current = stream;
-        const v = videoRef.current;
-        if (!v) return;
-        v.srcObject = stream; v.play();
-        setStatus("Point camera at a barcode or QR code");
-        const scan = () => {
-          if (!active) return;
-          const c = canvasRef.current;
-          if (!c) return;
-          const ctx = c.getContext("2d");
-          if (v.readyState === v.HAVE_ENOUGH_DATA) {
-            c.width = v.videoWidth; c.height = v.videoHeight;
-            ctx.drawImage(v, 0, 0);
-            const img  = ctx.getImageData(0, 0, c.width, c.height);
-            const code = jsQRLib(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
-            if (code) { onDetected(code.data); return; }
-          }
-          rafRef.current = requestAnimationFrame(scan);
-        };
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      if (!active) { stream.getTracks().forEach(t => t.stop()); return; }
+      streamRef.current = stream;
+      const v = videoRef.current;
+      if (!v) return;
+      v.srcObject = stream;
+      await v.play();
+      setStatus("Point camera at a barcode or QR code");
+
+      const scan = () => {
+        if (!active) return;
+        const c = canvasRef.current;
+        if (!c) return;
+        const ctx = c.getContext("2d");
+        if (v.readyState === v.HAVE_ENOUGH_DATA && v.videoWidth > 0) {
+          c.width = v.videoWidth; c.height = v.videoHeight;
+          ctx.drawImage(v, 0, 0);
+          const img  = ctx.getImageData(0, 0, c.width, c.height);
+          const code = jsQRLib(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
+          if (code) { onDetected(code.data); return; }
+        }
         rafRef.current = requestAnimationFrame(scan);
-      })
-      .catch(() => setStatus("Camera access denied. Please allow camera and retry."));
+      };
+      rafRef.current = requestAnimationFrame(scan);
+    } catch (e) {
+      setError(true);
+      setStarted(false);
+      if (e.name === "NotAllowedError") {
+        setStatus("Camera access denied. Go to Settings → Safari → Camera → Allow, then try again.");
+      } else if (e.name === "NotFoundError") {
+        setStatus("No camera found on this device.");
+      } else {
+        setStatus("Camera error: " + e.message);
+      }
+    }
     return () => {
       active = false;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
     };
-  }, [jsQRLib, onDetected]);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+    };
+  }, []);
 
   return (
     <div style={{ position:"fixed", inset:0, background:"#000", display:"flex",
       flexDirection:"column", alignItems:"center", justifyContent:"center", zIndex:999 }}>
       <div style={{ position:"relative", width:"100%", maxWidth:480 }}>
-        <video ref={videoRef} style={{ width:"100%", display:"block" }} playsInline muted />
-        <div style={{ position:"absolute", inset:0, boxShadow:"inset 0 0 0 9999px rgba(0,0,0,0.45)" }}>
-          <div style={{ position:"absolute", top:"25%", left:"10%", width:"80%", height:"50%",
-            border:"2px solid #4ade80", borderRadius:8 }} />
-        </div>
+        <video ref={videoRef} style={{ width:"100%", display:"block", minHeight: started ? "auto" : 0 }}
+          playsInline muted autoPlay />
+        {started && (
+          <div style={{ position:"absolute", inset:0, boxShadow:"inset 0 0 0 9999px rgba(0,0,0,0.45)" }}>
+            <div style={{ position:"absolute", top:"25%", left:"10%", width:"80%", height:"50%",
+              border:"2px solid #4ade80", borderRadius:8 }} />
+          </div>
+        )}
       </div>
       <canvas ref={canvasRef} style={{ display:"none" }} />
-      <p style={{ color:"#fff", marginTop:16, fontSize:14, textAlign:"center", padding:"0 24px" }}>{status}</p>
-      <button onClick={onClose} style={{ marginTop:20, padding:"10px 32px", background:"#ef4444",
-        color:"#fff", border:"none", borderRadius:8, cursor:"pointer", fontSize:15, fontWeight:600 }}>
-        Cancel
-      </button>
+      <p style={{ color: error ? "#fca5a5" : "#fff", marginTop:16, fontSize:14,
+        textAlign:"center", padding:"0 24px", lineHeight:1.6 }}>{status}</p>
+      <div style={{ display:"flex", flexDirection:"column", gap:12, marginTop:16, alignItems:"center" }}>
+        {!started && (
+          <button onClick={startCamera} style={{ padding:"14px 40px", background:"#22c55e",
+            color:"#fff", border:"none", borderRadius:10, cursor:"pointer",
+            fontSize:16, fontWeight:700, boxShadow:"0 4px 16px rgba(34,197,94,0.4)" }}>
+            📷 Start Camera
+          </button>
+        )}
+        <button onClick={onClose} style={{ padding:"10px 32px", background:"#ef4444",
+          color:"#fff", border:"none", borderRadius:8, cursor:"pointer", fontSize:15, fontWeight:600 }}>
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }
