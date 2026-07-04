@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import jsRQ from "jsqr";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIGURATION — fill these in after following the setup guide
