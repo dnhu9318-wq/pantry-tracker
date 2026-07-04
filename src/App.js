@@ -116,22 +116,33 @@ function BarcodeScanner({ onDetected, onClose }) {
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const rafRef    = useRef(null);
-  const [status, setStatus]     = useState("Tap the button below to start your camera");
+  const [status, setStatus]     = useState("Loading scanner…");
   const [jsQRLib, setJsQRLib]   = useState(null);
   const [started, setStarted]   = useState(false);
   const [error, setError]       = useState(false);
+  const [ready, setReady]       = useState(false);
 
   useEffect(() => {
-    if (window.jsQR) { setJsQRLib(() => window.jsQR); return; }
+    if (window.jsQR) {
+      setJsQRLib(() => window.jsQR);
+      setReady(true);
+      setStatus("Tap the button below to start your camera");
+      return;
+    }
     const s = document.createElement("script");
     s.src = "https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js";
-    s.onload = () => setJsQRLib(() => window.jsQR);
+    s.onload = () => {
+      setJsQRLib(() => window.jsQR);
+      setReady(true);
+      setStatus("Tap the button below to start your camera");
+    };
+    s.onerror = () => setStatus("Failed to load scanner. Check your connection and retry.");
     document.head.appendChild(s);
     return () => { try { document.head.removeChild(s); } catch {} };
   }, []);
 
   const startCamera = async () => {
-    if (!jsQRLib) { setStatus("Still loading scanner, please wait a moment…"); return; }
+    if (!jsQRLib) return;
     setStarted(true);
     setStatus("Starting camera…");
     setError(false);
@@ -205,7 +216,7 @@ function BarcodeScanner({ onDetected, onClose }) {
       <p style={{ color: error ? "#fca5a5" : "#fff", marginTop:16, fontSize:14,
         textAlign:"center", padding:"0 24px", lineHeight:1.6 }}>{status}</p>
       <div style={{ display:"flex", flexDirection:"column", gap:12, marginTop:16, alignItems:"center" }}>
-        {!started && (
+        {!started && ready && (
           <button onClick={startCamera} style={{ padding:"14px 40px", background:"#22c55e",
             color:"#fff", border:"none", borderRadius:10, cursor:"pointer",
             fontSize:16, fontWeight:700, boxShadow:"0 4px 16px rgba(34,197,94,0.4)" }}>
