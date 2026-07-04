@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import jsRQ from "jsqr";
+import jsQR from "jsqr";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIGURATION — fill these in after following the setup guide
@@ -117,33 +117,11 @@ function BarcodeScanner({ onDetected, onClose }) {
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const rafRef    = useRef(null);
-  const [status, setStatus]     = useState("Loading scanner…");
-  const [jsQRLib, setJsQRLib]   = useState(null);
-  const [started, setStarted]   = useState(false);
-  const [error, setError]       = useState(false);
-  const [ready, setReady]       = useState(false);
-
-  useEffect(() => {
-    if (window.jsQR) {
-      setJsQRLib(() => window.jsQR);
-      setReady(true);
-      setStatus("Tap the button below to start your camera");
-      return;
-    }
-    const s = document.createElement("script");
-    s.src = "https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js";
-    s.onload = () => {
-      setJsQRLib(() => window.jsQR);
-      setReady(true);
-      setStatus("Tap the button below to start your camera");
-    };
-    s.onerror = () => setStatus("Failed to load scanner. Check your connection and retry.");
-    document.head.appendChild(s);
-    return () => { try { document.head.removeChild(s); } catch {} };
-  }, []);
+  const [status, setStatus]   = useState("Tap the button below to start your camera");
+  const [started, setStarted] = useState(false);
+  const [error, setError]     = useState(false);
 
   const startCamera = async () => {
-    if (!jsQRLib) return;
     setStarted(true);
     setStatus("Starting camera…");
     setError(false);
@@ -169,7 +147,7 @@ function BarcodeScanner({ onDetected, onClose }) {
           c.width = v.videoWidth; c.height = v.videoHeight;
           ctx.drawImage(v, 0, 0);
           const img  = ctx.getImageData(0, 0, c.width, c.height);
-          const code = jsQRLib(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
+          const code = jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
           if (code) { onDetected(code.data); return; }
         }
         rafRef.current = requestAnimationFrame(scan);
@@ -217,7 +195,7 @@ function BarcodeScanner({ onDetected, onClose }) {
       <p style={{ color: error ? "#fca5a5" : "#fff", marginTop:16, fontSize:14,
         textAlign:"center", padding:"0 24px", lineHeight:1.6 }}>{status}</p>
       <div style={{ display:"flex", flexDirection:"column", gap:12, marginTop:16, alignItems:"center" }}>
-        {!started && ready && (
+        {!started && (
           <button onClick={startCamera} style={{ padding:"14px 40px", background:"#22c55e",
             color:"#fff", border:"none", borderRadius:10, cursor:"pointer",
             fontSize:16, fontWeight:700, boxShadow:"0 4px 16px rgba(34,197,94,0.4)" }}>
@@ -756,5 +734,7 @@ export default function PantryTracker() {
                       onSave={handleSave} onCancel={() => { setShowForm(false); setEditItem(null); setScanned(null); }} />}
       {viewNutrition && <NutritionPanel nutrition={viewNutrition} onClose={() => setViewNut(null)} />}
     </div>
+  );
+}
   );
 }
