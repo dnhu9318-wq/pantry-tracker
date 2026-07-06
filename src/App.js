@@ -4,10 +4,10 @@ import jsQR from "jsqr";
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIGURATION — fill these in after following the setup guide
 // ─────────────────────────────────────────────────────────────────────────────
-const GOOGLE_API_KEY    = "YOUR_API_KEY_HERE";
-const SPREADSHEET_ID    = "YOUR_SPREADSHEET_ID_HERE";
+const GOOGLE_API_KEY    = "AIzaSyCT1vpcY0R4qSKb8wpmypsQTTyGhUZ2Qms ";
+const SPREADSHEET_ID    = "1KOtHFxDloJZqORXmTzZ-JM0R2eF6v-jongLhKIaFFI8";
 const SHEET_NAME        = "Inventory";  // must match your tab name exactly
-const CLIENT_ID         = "YOUR_CLIENT_ID_HERE";
+const CLIENT_ID         = "1083919079784-tv13b0nckcspcll1frfgq6saktk9tcrh.apps.googleusercontent.com";
 const SCOPES            = "https://www.googleapis.com/auth/spreadsheets";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
