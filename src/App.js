@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 const GOOGLE_API_KEY    = "YOUR_API_KEY_HERE";
 const SPREADSHEET_ID    = "1KOtHFxDloJZqORXmTzZ-JM0R2eF6v-jongLhKIaFFI8";
 const SHEET_NAME        = "Inventory";  // must match your tab name exactly
-const CLIENT_ID         = "Y500392210194-v3jkd3cd1t7rj13qf8otp3p74gedilsr.apps.googleusercontent.com";
+const CLIENT_ID         = "500392210194-v3jkd3cd1t7rj13qf8otp3p74gedilsr.apps.googleusercontent.com";
 const SCOPES            = "https://www.googleapis.com/auth/spreadsheets";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
